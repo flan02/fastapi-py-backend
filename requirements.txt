@@ -1,0 +1,5 @@
+fastapi[standard]
+# pip install fastapi
+# pip install --upgrade fastapi[standard]
+uvicorn
+ruff
