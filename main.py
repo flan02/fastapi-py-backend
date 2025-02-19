@@ -1,5 +1,5 @@
-from fastapi import FastAPI
-from typing import Optional
+from fastapi import FastAPI, HTTPException
+from typing import Optional, List
 from pydantic import BaseModel, Field
 from enum import IntEnum
 
@@ -26,12 +26,12 @@ class TodoBase(BaseModel):
     priority: Prority = Field(default=Prority.LOW, description="Priority of the todo")
 
 
-class TodoCreate(TodoBase):  # Inherit from TodoBase
+class TodoCreate(TodoBase):  # Inherit from TodoBase. No need to add id
     pass
 
 
-class Todo(TodoBase):
-    id: int = Field(..., description="Id of the todo")
+class Todo(TodoBase):  # Return the id + the TodoBase (title, description, priority)
+    id: int = Field(..., description="Unique identifier of the todo")
 
 
 class TodoUpdate(BaseModel):  # Inherit from TodoBase
@@ -46,60 +46,72 @@ class TodoUpdate(BaseModel):  # Inherit from TodoBase
 # GET, POST, PUT, DELETE
 
 all_todos = [
-    {"id": 1, "title": "Sports", "description": "Go to the gym"},
-    {"id": 2, "title": "Read", "description": "Read 10 pages"},
-    {"id": 3, "title": "Shop", "description": "Go shopping"},
-    {"id": 4, "title": "Study", "description": "Study for exam"},
-    {"id": 5, "title": "Meditate", "description": "Meditate 20 minutes"},
+    Todo(id=1, title="Sports", description="Go to the gym", priority=Prority.HIGH),
+    Todo(id=2, title="Read", description="Read 10 pages", priority=Prority.MEDIUM),
+    Todo(id=3, title="Shop", description="Go shopping", priority=Prority.LOW),
+    Todo(id=4, title="Study", description="Study for exam", priority=Prority.HIGH),
+    Todo(
+        id=5, title="Meditate", description="Meditate 20 minutes", priority=Prority.LOW
+    ),
 ]
 
 
-@api.get("/")
-def index():
-    return {"message": "Hello World!"}
+
+# @api.get("/")
+# def index():
+#     return {"message": "Hello World!"}
 
 
-@api.get("/todos/{id}")
+@api.get("/todos/{id}", response_model=Todo)
 def get_todo(id: int):
     for todo in all_todos:
-        if todo["id"] == id:
-            return {"result": todo}
-    return {"message": "Todo not found"}
+        if todo.id == id:
+            return todo
+
+    raise HTTPException(status_code=404, detail="Todo not found")
 
 
-@api.get("/todos")
+@api.get("/todos", response_model=List[Todo])
 def get_todos(quantity: Optional[int] = None):
     if quantity:
         return all_todos[:quantity]
     else:
-        return {"result": all_todos}
+        return all_todos
 
 
-@api.post("/todos")
-def create_todo(todo: Todo):
-    # we should validate inputs with pydantic
-    id = (
-        max(todo["id"] for todo in all_todos) + 1
-    )  # | get the max id and increment by 1
-    new_todo = {"id": id, "title": todo.title, "description": todo.description}
+@api.post("/todos", response_model=Todo)
+def create_todo(todo: TodoCreate):
+    id = max(todo.id for todo in all_todos) + 1  # | get the max id and increment by 1
+    new_todo = Todo( 
+        id=id, 
+        title=todo.title, 
+        description=todo.description, 
+        priority=todo.priority
+        )
     all_todos.append(new_todo)
-    return {"message": "Todo created successfully", "todo": new_todo}
+    return new_todo
 
 
-@api.put("/todos/{id}")
-def update_todo(id: int, updated_todo: Todo):
+@api.put("/todos/{id}", response_model=Todo)
+def update_todo(id: int, updated_todo: TodoUpdate):
     for todo in all_todos:
-        if todo["id"] == id:
-            todo["title"] = updated_todo.title
-            todo["description"] = updated_todo.description
-            return {"message": "Todo updated successfully", "todo": todo}
-    return {"error": "Todo not found"}
+        if todo.id == id:
+            if updated_todo.title is not None:
+                todo.title = updated_todo.title
+            if updated_todo.description is not None:
+                todo.description = updated_todo.description
+            if updated_todo.priority is not None:
+                todo.priority = updated_todo.priority
+            return todo
+
+    raise HTTPException(status_code=404, detail="Todo not found")
 
 
-@api.delete("/todos/{id}")
+@api.delete("/todos/{id}", response_model=Todo)
 def delete_todo(id: int):
-    for todo in all_todos:
-        if todo["id"] == id:
-            all_todos.remove(todo)
-            return {"message": "Todo deleted successfully"}
-    return {"error": "Todo not found"}
+    for index, todo in enumerate(all_todos):  # enumerate to get the index
+        if todo.id == id:
+            deleted_todo = all_todos.pop(index)
+            return deleted_todo
+
+    raise HTTPException(status_code=404, detail="Todo not found")
