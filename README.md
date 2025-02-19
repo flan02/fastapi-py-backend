@@ -7,6 +7,7 @@
 ## FastAPI development docs (only web our app is running)
 
 [http://127.0.0.1:8000/docs](http://127.0.0.1:8000/docs)
+[http://127.0.0.1:8000/redoc](http://127.0.0.1:8000/redoc)
 
 ## Commands
 
