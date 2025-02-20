@@ -14,3 +14,8 @@
 - uvicorn main:api --port 8000 --reload (common way)
 
 - fastapi dev main.py (doesn't work in w10)
+
+### PUT vs PATCH
+
+- PUT: update all fields
+- PATCH: update only the fields that are sent
