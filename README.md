@@ -19,3 +19,5 @@
 
 - PUT: update all fields
 - PATCH: update only the fields that are sent
+
+# more examples soon
